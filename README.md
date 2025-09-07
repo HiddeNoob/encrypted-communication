@@ -5,7 +5,6 @@ Bu proje, RFD (Radio Frequency Data) modülleri ile RSA şifreleme kullanarak g�
 ## Proje Özellikleri
 
 - **RSA Şifreleme**
-    - **128-bit anahtar desteği ile güçlü şifreleme**
     - **Prime Generator**: Sieve of Eratosthenes algoritması ile asal sayı üretimi
     - **Fast Math**: Modüler aritmetik işlemler için optimize edilmiş fonksiyonlar
 - **RFD Entegrasyonu**: 868MHz band üzerinde kablosuz veri iletimi (geliştirilme aşamasında)
@@ -43,7 +42,7 @@ make
 
 - **Anahtar Üretimi**: Dinamik asal sayı üretimi
 - **Şifreleme/Deşifreleme**: Byte-level şifreleme desteği
-- **128-bit Aritmetik**: `__uint128_t` türü ile büyük sayı işlemleri
+- **64-bit Aritmetik**: `__uint64_t` türü ile büyük sayı işlemleri
 
 # Kullandığım Kaynaklar
 - [Modüler Aritmetik](https://www.derspresso.com.tr/matematik/moduler-aritmetik)

@@ -1,7 +1,8 @@
 #include "PrimeGenerator.h"
 #include <cstdlib>
 
-PrimeGenerator::PrimeGenerator(__uint128_t limit) {
+
+PrimeGenerator::PrimeGenerator(type limit) {
     m_limit = limit;
     nums = new bool[limit];
     for (size_t i = 0; i < limit; ++i) nums[i] = true;
@@ -27,12 +28,12 @@ void PrimeGenerator::calculatePrimes() {
     }
 }
 
-__uint128_t PrimeGenerator::getRandomPrime() {
+type PrimeGenerator::getRandomPrime() {
     auto it = primes.begin(); // start pointer
     std::advance(it, rand() % primes.size()); // move right random
     return *it; // return that value
 }
 
-bool PrimeGenerator::isPrime(__uint128_t number) {
+bool PrimeGenerator::isPrime(type number) {
     return nums[number];
 }

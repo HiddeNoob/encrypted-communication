@@ -2,12 +2,6 @@
 #include "FastMath.h"
 #include "PrimeGenerator.h"
 
-#include <cstdio>
-#include <cstdlib>
-#include <ctime>
-#include <cmath>
-#include <cstring>
-
 RSA::RSA(int bits) {
     GenerateKeys(bits);
 }
@@ -16,36 +10,36 @@ RSA::~RSA() {
     // Şimdilik boşrt
 }
 
-void RSA::Encrypt(const char* data, int data_len, __uint128_t* encrypted) {
+void RSA::Encrypt(const char* data, int data_len, type* encrypted) {
     for (int i = 0; i < data_len; ++i) {
         encrypted[i] = encryptByte(data[i]);
     }
 }
 
-void RSA::Decrypt(const __uint128_t* encrypted, int data_len, char* decrypted) {
+void RSA::Decrypt(const type* encrypted, int data_len, char* decrypted) {
     for (int i = 0; i < data_len; ++i) {
         decrypted[i] = (char)decryptByte(encrypted[i]);
     }
 }
 
-__uint128_t RSA::encryptByte(char byte) {
+type RSA::encryptByte(char byte) {
     return FastMath::fast_pow(byte, public_key, n);
 }
 
-__uint128_t RSA::decryptByte(__uint128_t encrypted_value) {
+type RSA::decryptByte(type encrypted_value) {
     return FastMath::fast_pow(encrypted_value, private_key, n);
 }
 
 void RSA::GenerateKeys(char bits) {
-    srand(time(NULL));
-    __uint128_t limit = (__uint128_t)1 << (__uint128_t)bits;
+    //srand(time(NULL));
+    type limit = (type)1 << (type)bits;
     PrimeGenerator primeGen(limit);
 
     printf("[RSA] Generating keys (%d bits)...\n", bits);
 
     p = primeGen.getRandomPrime();
     q = primeGen.getRandomPrime();
-    n = (__uint128_t)p * q;
+    n = (type)p * q;
     tot = FastMath::totient(p, q);
 
     do {
@@ -54,14 +48,13 @@ void RSA::GenerateKeys(char bits) {
 
     private_key = FastMath::mod_inverse(public_key, tot);
 
-    if((private_key * public_key) % tot != 1) throw -1;
+    if((private_key * public_key) % tot != 1) {
+        printf("RSA key generation error: private_key * public_key mod tot != 1\n");
+        // Hata yönetimi: burada return veya başka bir mekanizma eklenebilir
+    }
 
     printf("keys generated successfully.\n");
-    printf("--Private Key--\n%016llx%016llx", 
-           (unsigned long long)(public_key >> 64), 
-           (unsigned long long)(public_key & 0xFFFFFFFFFFFFFFFF));
+    printf("--Private Key--\n%llx", public_key), 
     printf("\n");
-    printf("--Public Key--\n%016llx%016llx\n", 
-           (unsigned long long)(private_key >> 64), 
-           (unsigned long long)(private_key & 0xFFFFFFFFFFFFFFFF));
+    printf("--Public Key--\n%llx\n", private_key);
 }

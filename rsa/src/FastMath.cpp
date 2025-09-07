@@ -8,9 +8,9 @@ type FastMath::mod_inverse(type a, type m) {
         return -1;
     } else {
         // Ensure result is positive (handle negative x)
-        __int128_t sx = static_cast<__int128_t>(x);
-        __int128_t sm = static_cast<__int128_t>(m);
-        __int128_t result = ((sx % sm) + sm) % sm;
+        type sx = static_cast<type>(x);
+        type sm = static_cast<type>(m);
+        type result = ((sx % sm) + sm) % sm;
         return static_cast<type>(result);
     }
 }

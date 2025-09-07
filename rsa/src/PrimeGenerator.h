@@ -1,17 +1,19 @@
 #pragma once
 #include <set>
 
+#include "config.h"
+
 class PrimeGenerator {
 public:
-    PrimeGenerator(__uint128_t limit);
+    PrimeGenerator(type limit);
     ~PrimeGenerator();
-    __uint128_t getRandomPrime();
-    bool isPrime(__uint128_t number);
+    type getRandomPrime();
+    bool isPrime(type number);
 
 private:
     bool* nums;
-    __uint128_t m_limit;
-    std::set<__uint128_t> primes;
+    type m_limit;
+    std::set<type> primes;
 
     void calculatePrimes();
 };

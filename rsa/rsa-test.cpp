@@ -1,55 +1,46 @@
 #include "RSA.h"
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
+#include <cstring>
+#include "pico/stdlib.h"
+#include "pico/stdio.h"
 
 bool test_rsa_encryption_decryption(int bits, const char* test_data) {
     printf("\n=== Testing RSA with %d bits ===\n", bits);
     
-    try {
-        RSA cryption = RSA(bits);
-        int data_len = strlen(test_data);
-        __uint128_t* encrypted = new __uint128_t[data_len];
-        char* decrypted = new char[data_len + 1];
+    RSA cryption = RSA(bits);
+    int data_len = strlen(test_data);
+    type* encrypted = new type[data_len];
+    char* decrypted = new char[data_len + 1];
 
-        printf("Original data: %s\n", test_data);
-        
-        // Encrypt
-        cryption.Encrypt(test_data, data_len, encrypted);
+    printf("Original data: %s\n", test_data);
+    
+    // Encrypt
+    cryption.Encrypt(test_data, data_len, encrypted);
 
-        printf("Encrypted data: ");
-        for (int i = 0; i < data_len; ++i) {
-            printf("%llx ", (unsigned long long)(encrypted[i]));
-        }
-        printf("\n");
-
-        // Decrypt
-        cryption.Decrypt(encrypted, data_len, decrypted);
-        decrypted[data_len] = '\0';
-        printf("Decrypted data: %s\n", decrypted);
-
-        // Verify
-        bool success = (strcmp(test_data, decrypted) == 0);
-        printf("Test result: %s\n", success ? "PASSED" : "FAILED");
-        
-        if (!success) {
-            printf("ERROR: Decryption failed!\n");
-            printf("Expected: %s\n", test_data);
-            printf("Got: %s\n", decrypted);
-        }
-
-        delete[] encrypted;
-        delete[] decrypted;
-        return success;
-        
-    } catch (int error) {
-        printf("ERROR: RSA key generation failed with error code %d\n", error);
-        return false;
-    } catch (...) {
-        printf("ERROR: Unknown error occurred\n");
-        return false;
+    printf("Encrypted data: ");
+    for (int i = 0; i < data_len; ++i) {
+        printf("%llx ", (unsigned long long)(encrypted[i]));
     }
+    printf("\n");
+
+    // Decrypt
+    cryption.Decrypt(encrypted, data_len, decrypted);
+    decrypted[data_len] = '\0';
+    printf("Decrypted data: %s\n", decrypted);
+
+    // Verify
+    bool success = (strcmp(test_data, decrypted) == 0);
+    printf("Test result: %s\n", success ? "PASSED" : "FAILED");
+    
+    if (!success) {
+        printf("ERROR: Decryption failed!\n");
+        printf("Expected: %s\n", test_data);
+        printf("Got: %s\n", decrypted);
+    }
+
+    delete[] encrypted;
+    delete[] decrypted;
+    return success;
+
 }
 
 int main() {

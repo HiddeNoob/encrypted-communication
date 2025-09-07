@@ -21,6 +21,11 @@ add_library(rsa_lib STATIC ${RSA_SOURCES} ${RSA_HEADERS})
 # Include dizinini ayarla
 target_include_directories(rsa_lib PUBLIC src)
 
+# Pico SDK entegrasyonu
+pico_sdk_init()
+target_link_libraries(rsa_lib pico_stdlib)
+#target_include_directories(rsa_lib PUBLIC ${PICO_SDK_PATH}/include)
+
 # Test çalıştırılabilir dosyası (isteğe bağlı)
 add_executable(rsa_test rsa-test.cpp)
 target_link_libraries(rsa_test rsa_lib)

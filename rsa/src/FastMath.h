@@ -1,6 +1,5 @@
 #pragma once
-
-using type = __uint128_t;
+#include "config.h"
 
 class FastMath {
 public:
