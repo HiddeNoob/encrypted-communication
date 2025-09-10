@@ -8,7 +8,7 @@ bool test_rsa_encryption_decryption(int bits, const char* test_data) {
     
     RSA cryption = RSA(bits);
     int data_len = strlen(test_data);
-    type* encrypted = new type[data_len];
+    rsa_data* encrypted = new rsa_data[data_len];
     char* decrypted = new char[data_len + 1];
 
     printf("Original data: %s\n", test_data);

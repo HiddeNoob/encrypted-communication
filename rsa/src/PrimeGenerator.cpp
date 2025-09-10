@@ -2,7 +2,7 @@
 #include <cstdlib>
 
 
-PrimeGenerator::PrimeGenerator(type limit) {
+PrimeGenerator::PrimeGenerator(rsa_data limit) {
     m_limit = limit;
     nums = new bool[limit];
     for (size_t i = 0; i < limit; ++i) nums[i] = true;
@@ -28,12 +28,12 @@ void PrimeGenerator::calculatePrimes() {
     }
 }
 
-type PrimeGenerator::getRandomPrime() {
+rsa_data PrimeGenerator::getRandomPrime() {
     auto it = primes.begin(); // start pointer
-    std::advance(it, rand() % primes.size()); // move right random
+    std::advance(it, rand() % primes.size()); // move right random (güvenli değil)
     return *it; // return that value
 }
 
-bool PrimeGenerator::isPrime(type number) {
+bool PrimeGenerator::isPrime(rsa_data number) {
     return nums[number];
 }

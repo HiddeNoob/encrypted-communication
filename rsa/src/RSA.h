@@ -10,15 +10,23 @@
 class RSA {
 public:
     RSA(int bits);
+    RSA(rsa_data tot,rsa_data n);
+
     ~RSA();
-    void Encrypt(const char* data, int data_len, type* encrypted);
-    void Decrypt(const type* encrypted, int data_len, char* decrypted);
+    void Encrypt(const char* data, int data_len, rsa_data* encrypted);
+    void Decrypt(const rsa_data* encrypted, int data_len, char* decrypted);
+    
+    // Getter fonksiyonları
+    rsa_data getPublicKey() const { return public_key; }
+    rsa_data getPrivateKey() const { return private_key; }
+    rsa_data getModulus() const { return n; }
 
 private:
     void GenerateKeys(char bits);
-    type encryptByte(char byte);
-    type decryptByte(type encrypted_value);
+    void GenerateKeys(rsa_data tot, rsa_data n);
+    rsa_data encryptByte(char byte);
+    rsa_data decryptByte(rsa_data encrypted_value);
 
-    type p, q, n, tot;
-    type public_key, private_key;
+    rsa_data p, q, n, tot;
+    rsa_data public_key, private_key;
 };

@@ -5,15 +5,15 @@
 
 class PrimeGenerator {
 public:
-    PrimeGenerator(type limit);
+    PrimeGenerator(rsa_data limit);
     ~PrimeGenerator();
-    type getRandomPrime();
-    bool isPrime(type number);
+    rsa_data getRandomPrime();
+    bool isPrime(rsa_data number);
 
 private:
     bool* nums;
-    type m_limit;
-    std::set<type> primes;
+    rsa_data m_limit;
+    std::set<rsa_data> primes;
 
     void calculatePrimes();
 };
