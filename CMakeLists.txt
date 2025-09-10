@@ -52,7 +52,7 @@ add_subdirectory(rsa)
 add_subdirectory(rfd)
 
 # Add the standard library to the build
-target_link_libraries(rfd-encrypt pico_stdlib rsa_lib rfd_lib )
+target_link_libraries(rfd-encrypt pico_stdlib pico_multicore rsa_lib rfd_lib )
 
 # Add the standard include files to the build
 target_include_directories(rfd-encrypt PRIVATE
