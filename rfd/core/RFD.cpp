@@ -1,26 +1,32 @@
 #include "RFD.h"
+#include "AllPackets.h"
 #include <cstring>
 #include <cstdio>
+#include <pico/stdlib.h>
 
 RFD::RFD(uart_inst_t* uart_inst, uint tx_pin, uint rx_pin) 
-    : cryptionService(16), uart(uart_inst), tx_pin(tx_pin), rx_pin(rx_pin), rx_buffer_pos(0) {
-    initID();
-}
+    : uart(uart_inst), tx_pin(tx_pin), rx_pin(rx_pin), cryptionService(16) { // 16 bitlik RSA anahtarı oluştur
+        initialize();
+        initID();
+    }
 
 void RFD::initialize() {
     uart_init(uart, 57600);
     gpio_set_function(tx_pin, GPIO_FUNC_UART);
     gpio_set_function(rx_pin, GPIO_FUNC_UART);
     
-    printf("[RFD %llx] UART initialized on pins TX:%d RX:%d\n", my_id, tx_pin, rx_pin);
-    printf("[RFD %llx] My ID: %llx\n", my_id, my_id);
+    printf(" UART initialized on pins TX:%d RX:%d\n", tx_pin, rx_pin);
 }
 
-void RFD::initID() {
-    // Basit ID üretimi
-    my_id = (uint64_t)time_us_64() ^ (uint64_t)0xDEADBEEF;
-    printf("[RFD %llx] Generated ID: %llx\n", my_id, my_id);
+void RFD::initID(){
+    // Rastgele ID oluştur (gerçek uygulamada benzersiz ID kullanılması önerilir)
+    id = ((uint64_t)rand() << 32) | rand();
+    printf("[RFD] Node ID initialized: %llx\n", id);
+    rx_buffer_pos = 0;
 }
+
+
+
 
 bool RFD::receivePacket(PacketHeader* header, uint8_t* payload) {
     // UART'dan veri oku
@@ -64,53 +70,55 @@ bool RFD::receivePacket(PacketHeader* header, uint8_t* payload) {
     return false;
 }
 
-void RFD::processIncomingData() {
+void RFD::processIncomingData(Node& node) {
     PacketHeader header;
     uint8_t payload[256];
     
     if (receivePacket(&header, payload)) {
-        printf("[RFD %llx] Received packet type: 0x%02X, length: %d\n", my_id, header.type, header.length);
+        printf("[RFD %llx] Received packet type: 0x%02X, length: %d\n", getId(), header.type, header.length);
         
         // Paketi oluştur ve işle
         auto packet = Packet::createFromBuffer(payload, header.length, (PacketType)header.type);
         if (packet) {
-            packet->handle(this);
+            packet->handle(node);
         } else {
-            printf("[RFD %llx] Failed to create packet from buffer\n", my_id);
+            printf("[RFD %llx] Failed to create packet from buffer\n", getId());
         }
     }
 }
 
 void RFD::sendHello() {
-    auto hello = std::make_unique<HelloPacket>(my_id, 
-                                               cryptionService.getPublicKey(), 
-                                               cryptionService.getModulus());
-    printf("[RFD %llx] Sending HELLO packet\n", my_id);
+    auto hello = std::make_unique<HelloPacket>(getId(), 
+                                               cryptionService.getPublicKey()->getKey(),
+                                               cryptionService.getPublicKey()->getBase());
+    printf("[RFD %llx] Sending HELLO packet\n", getId());
     hello->send(uart);
 }
 
 void RFD::sendMessage(uint64_t target_id, const char* message) {
-    auto msg = std::make_unique<SignedMessagePacket>(my_id, target_id);
+    auto msg = std::make_unique<SignedMessagePacket>(getId(), target_id);
     
+    uint32_t message_length = strlen(message);
+
+    uint64_t encrypted_data[message_length];
+
+    // cryptionService.Encrypt(message,message_length,encrypted_data);
+
     // Mesajı payload'a kopyala
-    msg->setPayload((const uint8_t*)message, strlen(message));
+    msg->setPayload((const uint8_t*)encrypted_data, message_length);
     
     // Basit imza oluştur (gerçek uygulamada RSA imzası kullanılmalı)
-    uint64_t simple_signature = my_id ^ target_id;
-    msg->setSignature((const uint8_t*)&simple_signature);
+    uint32_t signature[message_length];
+    FastMath::myHash(message,signature,message_length);
+    // hashi imzala
+    msg->setSignature((const uint8_t*)&signature);
     
-    printf("[RFD %llx] Sending message to: %llx\n", my_id, target_id);
+    printf("[RFD %llx] Sending message to: %llx\n", this->getId(), target_id);
     msg->send(uart);
 }
 
 void RFD::sendPing(uint64_t target_id) {
-    auto ping = std::make_unique<PingPacket>(my_id, target_id, time_us_32());
-    printf("[RFD %llx] Sending PING to: %llx\n", my_id, target_id);
+    auto ping = std::make_unique<PingPacket>(this->getId(), target_id, time_us_32());
+    printf("[RFD %llx] Sending PING to: %llx\n", this->getId(), target_id);
     ping->send(uart);
-}
-
-void RFD::registerNode(uint64_t node_id, uint64_t public_key, uint64_t modulus) {
-    networkPublicKeys[node_id] = public_key;
-    networkModulus[node_id] = modulus;
-    printf("[RFD %llx] Registered node: %llx with public key: %llx\n", my_id, node_id, public_key);
 }

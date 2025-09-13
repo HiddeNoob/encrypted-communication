@@ -5,6 +5,7 @@
 #include <cstring>
 #include "RSA.h"
 #include "RFD.h"
+#include "Node.h"
 
 mutex_t printf_mutex;
 volatile bool core1_ready = false;
@@ -57,17 +58,16 @@ void parse_and_execute_command(const char* cmd, RFD& node1) {
 }
 
 void core1_main() {
-    RFD rfd_node2(uart1, 4, 5);
-    rfd_node2.initialize();
+    Node node2(RFD(uart1, 4, 5));
     
     core1_ready = true;
     
     mutex_enter_blocking(&printf_mutex);
-    printf("[CORE1] node2 hazir, id: %llx\n", rfd_node2.getMyId());
+    printf("[CORE1] node2 hazir, id: %llx\n", node2.getId());
     mutex_exit(&printf_mutex);
     
     while (true) {
-        rfd_node2.processIncomingData();
+        node2.getRFD().processIncomingData(node2);
         
         sleep_ms(10);
     }
@@ -88,10 +88,11 @@ int main() {
     multicore_launch_core1(core1_main);
     
     sleep_ms(100);
-    RFD rfd_node1(uart0, 0, 1);
-    rfd_node1.initialize();
+
+
+    Node node1(RFD(uart0, 0, 1));
     
-    printf("[CORE0] node1 hazir, id: %llx\n", rfd_node1.getMyId());
+    printf("[CORE0] node1 hazir, id: %llx\n", node1.getId());
     
     while (!core1_ready) {
         sleep_ms(10);
@@ -105,7 +106,7 @@ int main() {
     
     while (true) {
         // gelen veriyi isle
-        rfd_node1.processIncomingData();
+        node1.getRFD().processIncomingData(node1);
         
         // usb'den komut oku
         int c = getchar_timeout_us(1000); 
@@ -113,7 +114,7 @@ int main() {
             if (c == '\n' || c == '\r') {
                 if (input_pos > 0) {
                     input_buffer[input_pos] = '\0';
-                    parse_and_execute_command(input_buffer, rfd_node1);
+                    parse_and_execute_command(input_buffer, node1.getRFD());
                     input_pos = 0;
                     sleep_ms(10); 
                     printf(">>> ");

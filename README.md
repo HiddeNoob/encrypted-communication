@@ -38,17 +38,48 @@ Bu proje, Pico (RP2040) gibi gömülü sistemler için tasarlanmış, paket taba
 ```
 rfd-encrypted/
 ├── src/                 # Ana uygulama kodları
-├── rsa/                 # RSA şifreleme kütüphanesi
+│   └── main.cpp        # Ana uygulama dosyası
+├── math/               # Matematik işlemleri kütüphanesi
+│   ├── headers/
+│   │   ├── FastMath.h          # Hızlı matematik fonksiyonları
+│   │   ├── PrimeGenerator.h    # Asal sayı üretici
+│   │   └── config.h            # Temel veri tipleri tanımları
 │   ├── src/
-│   │   ├── RSA.h/cpp           # RSA ana sınıfı
-│   │   ├── PrimeGenerator.h/cpp # Asal sayı üretici
-│   │   └── FastMath.h/cpp      # Matematik fonksiyonları
-│   └── test.cpp        # RSA testleri
-├── rfd/                 # RFD iletişim protokolü kütüphanesi
-│   └── src/
-│       ├── RFD.h/cpp           # Ana RFD yönetim sınıfı
-│       └── Packet.h/cpp        # Paket yapıları ve sınıfları
-└── build/              # Derleme çıktıları
+│   │   ├── FastMath.cpp        # Modüler aritmetik işlemleri
+│   │   └── PrimeGenerator.cpp  # Eratosthenes eleme algoritması
+│   └── CMakeLists.txt
+├── rsa/                # RSA şifreleme kütüphanesi
+│   ├── headers/
+│   │   ├── RSA.h              # RSA ana sınıfı
+│   │   ├── Key.h              # Anahtar sınıfı (public/private)
+│   │   └── config.h           # RSA veri tipleri
+│   ├── src/
+│   │   ├── RSA.cpp            # RSA implementasyonu
+│   │   └── Key.cpp            # Anahtar işlemleri
+│   └── CMakeLists.txt
+├── rfd/                # RFD iletişim protokolü kütüphanesi
+│   ├── core/
+│   │   ├── headers/
+│   │   │   ├── RFD.h          # Ana RFD yönetim sınıfı
+│   │   │   └── Node.h         # Ağ düğümü sınıfı
+│   │   ├── RFD.cpp
+│   │   └── Node.cpp
+│   ├── packets/
+│   │   ├── headers/
+│   │   │   ├── Packet.h       # Soyut paket sınıfı
+│   │   │   ├── HelloPacket.h  # Ağa katılma paketi
+│   │   │   ├── PingPacket.h   # Durum kontrolü paketi
+│   │   │   ├── AckPacket.h    # Onay paketi
+│   │   │   └── SignedMessagePacket.h # Şifreli mesaj paketi
+│   │   ├── Packet.cpp
+│   │   ├── HelloPacket.cpp
+│   │   ├── PingPacket.cpp
+│   │   ├── AckPacket.cpp
+│   │   └── SignedMessagePacket.cpp
+│   └── CMakeLists.txt
+├── build/              # Derleme çıktıları
+├── test_x86.cpp       # PC üzerinde test dosyası
+└── CMakeLists.txt     # Ana proje build dosyası
 ```
 
 ## Kullanım
@@ -57,13 +88,43 @@ rfd-encrypted/
 ```bash
 mkdir build && cd build
 cmake ..
-make
+ninja  # veya make
 ```
 
-### Çalıştırma
+### PC Test Çalıştırma
 ```bash
-./main
+# PC üzerinde test için
+g++ test_x86.cpp rsa/src/RSA.cpp rsa/src/Key.cpp math/src/FastMath.cpp math/src/PrimeGenerator.cpp -I rsa/headers -I math/headers -g -o test
+./test
 ```
+
+### Pico Çalıştırma
+```bash
+# Pico için derleme
+ninja
+# Flash işlemi (picotool ile)
+picotool load rfd-encrypt.uf2 -fx
+```
+
+## Kütüphane Yapısı
+
+### Math Kütüphanesi
+Matematik işlemleri için ayrılmış modüler bir kütüphane:
+- **FastMath**: Modüler aritmetik, hızlı üs alma, GCD ve hash işlemleri
+- **PrimeGenerator**: Eratosthenes eleme algoritması ile asal sayı üretimi
+- **config.h**: Temel veri tiplerinin tanımlanması (`rsa_data`)
+
+### RSA Kütüphanesi
+RSA şifreleme algoritmasının implementasyonu:
+- **RSA Sınıfı**: Anahtar üretimi ve şifreleme/deşifreleme işlemleri
+- **Key Sınıfı**: Public/private anahtar yönetimi ve imzalama işlemleri
+- Math kütüphanesine bağımlı
+
+### RFD Kütüphanesi
+RF iletişim protokolünün implementasyonu:
+- **Core**: RFD ana yönetim sınıfı ve Node (düğüm) yönetimi
+- **Packets**: Farklı paket türleri ve bunların işlenmesi
+- RSA ve Math kütüphanelerine bağımlı
 
 ## RSA Şifreleme Özellikleri
 

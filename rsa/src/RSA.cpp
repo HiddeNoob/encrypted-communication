@@ -1,10 +1,12 @@
 #include "RSA.h"
 #include "FastMath.h"
 #include "PrimeGenerator.h"
+#include <ctime>
 
 RSA::RSA(int bits) {
     GenerateKeys(bits);
 }
+
 
 RSA::RSA(rsa_data tot,rsa_data n){
     GenerateKeys(tot,n);
@@ -14,55 +16,48 @@ RSA::~RSA() {
     // Şimdilik boşrt
 }
 
-void RSA::Encrypt(const char* data, int data_len, rsa_data* encrypted) {
-    for (int i = 0; i < data_len; ++i) {
-        encrypted[i] = encryptByte(data[i]);
-    }
-}
-
-void RSA::Decrypt(const rsa_data* encrypted, int data_len, char* decrypted) {
-    for (int i = 0; i < data_len; ++i) {
-        decrypted[i] = (char)decryptByte(encrypted[i]);
-    }
-}
-
-rsa_data RSA::encryptByte(char byte) {
-    return FastMath::fast_pow(byte, public_key, n);
-}
-
-rsa_data RSA::decryptByte(rsa_data encrypted_value) {
-    return FastMath::fast_pow(encrypted_value, private_key, n);
-}
 
 void RSA::GenerateKeys(rsa_data tot,rsa_data n){
+    rsa_data public_key;
+    rsa_data private_key;
+    
     do {
+        srand(time(NULL)); // kesinlikle güvenli değil
         public_key = rand() % (tot - 2) + 2;
     } while (FastMath::gcd(tot, public_key) != 1);
 
     private_key = FastMath::mod_inverse(public_key, tot);
+    
+    printf("--Public Key--\n%llx\n", public_key);
+    printf("\n");
+    printf("--Private Key--\n%llx\n", private_key);
 
     if((private_key * public_key) % tot != 1) {
         printf("RSA key generation error: private_key * public_key mod tot != 1\n");
         abort();
     }
 
+    this->private_key = new Key(private_key,n);
+    this->public_key = new Key(public_key,n);
+
+
     printf("keys generated successfully.\n");
-    printf("--Private Key--\n%llx", public_key), 
-    printf("\n");
-    printf("--Public Key--\n%llx\n", private_key);
+
 }
 
 void RSA::GenerateKeys(char bits) {
     //srand(time(NULL));
-    rsa_data limit = (rsa_data)1 << (rsa_data)bits;
+    rsa_data limit = ((rsa_data)1 << (rsa_data)bits) - 1;
     PrimeGenerator primeGen(limit);
 
     printf("[RSA] Generating keys (%d bits)...\n", bits);
 
-    p = primeGen.getRandomPrime();
-    q = primeGen.getRandomPrime();
-    n = (rsa_data)p * q;
-    tot = FastMath::totient(p, q);
+    rsa_data p = primeGen.getRandomPrime();
+    rsa_data q = primeGen.getRandomPrime();
+    rsa_data n = (rsa_data)p * q;
+    rsa_data tot = FastMath::totient(p, q);
+    printf("[RSA] Selected primes p=%llu, q=%llu\n", p, q);
+    printf("[RSA] Calculated n=%llu and totient=%llu\n", n, tot);
 
     this->GenerateKeys(tot,n);
 }
