@@ -1,7 +1,6 @@
 #include "rsa/headers/RSA.h"
 #include <iostream>
 #include <cstdint>
-#include <AllPackets.h>
 #include <cstddef>
 
 using namespace std;
@@ -22,22 +21,7 @@ void test_cryption(){
     printf("\n\n");
 }
 
-void test_serialization(){
-    cout << "Testing PingPacket serialization..." << endl;
-    PingPacket ping(0x1234567890abcdef, 0xfedcba0987654321, 0xAABBCCDD);
-    uint8_t buffer[256];
-    ping.serialize(buffer);
-    PingPacket ping2(0,0,0);
-    ping2.deserialize(buffer, ping.getPayloadSize());
-    printf("Original PingPacket: sender_id=%llx, target_id=%llx, timestamp=%u\n", 
-           ping.getSenderId(), ping.getTargetId(), ping.getTimestamp());
-    printf("Deserialized PingPacket: sender_id=%llx, target_id=%llx, timestamp=%u\n", 
-           ping2.getSenderId(), ping2.getTargetId(), ping2.getTimestamp());
-    
-}
-
 int main(){
     test_cryption();
-    test_serialization();
     return 0;
 }

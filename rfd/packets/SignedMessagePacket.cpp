@@ -18,8 +18,6 @@ bool SignedMessagePacket::deserialize(const uint8_t* buffer, uint8_t length) {
 
     Packet::deserialize(buffer, length);
     size_t offset = Packet::getPayloadSize();
-    memcpy(&sender_id, buffer + offset, sizeof(sender_id));
-    offset += sizeof(sender_id);
     memcpy(&target_id, buffer + offset, sizeof(target_id));
     offset += sizeof(target_id);
     memcpy(payload, buffer + offset, sizeof(payload));
