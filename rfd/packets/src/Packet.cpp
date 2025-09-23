@@ -1,4 +1,5 @@
 #include "AllPackets.h"
+#include "rfd_config.h"
 
 void Packet::serialize(uint8_t* buffer) const {
     memcpy(buffer, &sender_id, sizeof(sender_id));
@@ -13,7 +14,7 @@ bool Packet::deserialize(const uint8_t* buffer, uint8_t length) {
 
 
 // Ana Packet sınıfı metodları
-void Packet::send(uart_inst_t* uart) const {
+void Packet::send(IComm& comm) const {
     PacketHeader header;
     header.magic1 = 0xAA;
     header.magic2 = 0x55;
@@ -21,36 +22,63 @@ void Packet::send(uart_inst_t* uart) const {
     header.length = getPayloadSize();
 
     printf("[Packet] Preparing to send packet type: 0x%02X, length: %d\n", header.type, header.length);
-
+    printf("[Packet] Header bytes: ");
+    for (int i = 0; i < sizeof(PacketHeader); i++) {
+        printf("%02X ", ((uint8_t*)&header)[i]);
+    }
+    printf("\n");
     // Header gönder
     uint8_t* header_bytes = (uint8_t*)&header;
     for (int i = 0; i < sizeof(PacketHeader); i++) {
-        uart_putc_raw(uart, header_bytes[i]);
+        comm.sendByte(header_bytes[i]);
     }
+    printf("[Packet] Header sent\n");
+    
+    // TX buffer'ın boşalmasını bekle
+    comm.waitSendComplete();
+    
+    printf("[Packet] Payload bytes: ");
 
     // Payload gönder
-    uint8_t payload_buffer[256];
+    uint8_t payload_buffer[MAX_PACKET_PAYLOAD_SIZE];
     serialize(payload_buffer);
+    
     for (int i = 0; i < header.length; i++) {
-        uart_putc_raw(uart, payload_buffer[i]);
+        printf("%02X ", payload_buffer[i]);
+    }
+    printf("\n");
+
+    // Payload'ı küçük parçalar halinde gönder
+    const uint32_t chunk_size = PACKET_CHUNK_SIZE;
+    for (uint32_t i = 0; i < header.length; i += chunk_size) {
+        uint32_t remaining = header.length - i;
+        uint32_t current_chunk = (remaining > chunk_size) ? chunk_size : remaining;
+        
+        printf("[Packet] Sending chunk %u-%u (%u bytes)\n", i, i + current_chunk - 1, current_chunk);
+        
+        for (uint32_t j = 0; j < current_chunk; j++) {
+            uint32_t byte_index = i + j;
+            comm.sendByte(payload_buffer[byte_index]);
+            sleep_us(PACKET_BYTE_DELAY_US);
+        }
+        
+        // Her chunk'tan sonra bekle
+        comm.waitSendComplete();
+        sleep_ms(PACKET_CHUNK_DELAY_MS);
+        
     }
 
-    uart_tx_wait_blocking(uart);
+    comm.waitSendComplete();
     printf("[Packet] Sent %s packet (size: %d)\n", 
            packet_type == PACKET_HELLO ? "HELLO" :
            packet_type == PACKET_SIGNED_MESSAGE ? "MESSAGE" :
            packet_type == PACKET_PING ? "PING" :
-           packet_type == PACKET_ACK ? "ACK" : "UNKNOWN", 
+           packet_type == PACKET_ACK ? "ACK" : 
+           packet_type == PACKET_KEY ? "KEY" : "UNKNOWN",
            header.length);
 }
 
-std::unique_ptr<Packet> Packet::createFromBuffer(const uint8_t* buffer, uint8_t length, PacketType type) {
-    printf("Create from buffer: type=0x%02X, length=%d\n", type, length);
-    for (size_t i = 0; i < length; i++)
-    {
-        printf("%02X ", buffer[i]);
-    }
-    printf("\n");
+std::unique_ptr<Packet> Packet::createFromBuffer(const uint8_t* buffer, uint32_t length, PacketType type) {
 
     switch (type) {
         case PACKET_HELLO: {
@@ -76,6 +104,13 @@ std::unique_ptr<Packet> Packet::createFromBuffer(const uint8_t* buffer, uint8_t 
         }
         case PACKET_ACK: {
             auto packet = std::make_unique<AckPacket>(0,0, 0);
+            if (packet->deserialize(buffer, length)) {
+                return std::move(packet);
+            }
+            break;
+        }
+        case PACKET_KEY: {
+            auto packet = std::make_unique<KeyPacket>(0, 0, 0, 0);
             if (packet->deserialize(buffer, length)) {
                 return std::move(packet);
             }

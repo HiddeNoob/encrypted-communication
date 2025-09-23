@@ -57,11 +57,11 @@ int64_t FastMath::totient(int64_t p, int64_t q) {
 }
 
 // güvenli degil, öğrenme amaçlı basit hash
-void FastMath::myHash(const char* data, uint32_t* hash, uint32_t length) {
+void FastMath::myHash(const uint8_t* data, uint32_t* hash, uint32_t length) {
     *hash = 0x811C9DC5; 
 
     for (uint32_t i = 0; i < length; i++) {
-        *hash ^= (uint8_t)data[i];         
-        *hash *= 2654435761;              
+        *hash ^= data[i];
+        *hash *= 2654435761;
     }
 }

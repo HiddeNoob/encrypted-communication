@@ -1,5 +1,6 @@
 #include "PrimeGenerator.h"
 #include <cstdlib>
+#include <ctime>
 
 
 PrimeGenerator::PrimeGenerator(uint64_t limit) {

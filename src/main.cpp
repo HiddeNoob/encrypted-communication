@@ -1,4 +1,5 @@
 #include <iostream>
+#include <vector>
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
 #include "pico/mutex.h"
@@ -9,51 +10,127 @@
 
 mutex_t printf_mutex;
 volatile bool core1_ready = false;
-char usb_command_buffer[256];
-volatile bool new_command = false;
 
-void parse_and_execute_command(const char* cmd, RFD& node1) {
-    printf("\n[USB] komut alindi: %s\n", cmd);
+void show_menu() {
+    printf("\n=== RFD Ag Yonetimi Menusu ===\n");
+    printf("1. Agi tara (Hello paketi gonder)\n");
+    printf("2. Bagli olan nodelar\n");
+    printf("0. Cikis\n");
+    printf("Seciminiz (0-2): ");
+}
+
+void network_scan(RFD& rfd) {
+    printf("\n[AG TARAMA] Hello paketi gonderiliyor...\n");
+    printf("Diger nodlardan yanit bekleniyor...\n");
+    rfd.sendHello();
+    printf("Hello paketi gonderildi. Gelen yanitlar otomatik olarak isleniyor.\n");
+    printf("Biraz bekleyip '2' secenegini kullanarak kayitli nodelari gorebilirsiniz.\n");
+}
+
+void show_connected_nodes_menu(Node& node) {
+    const auto& network = node.getNetwork();
+    if (network.empty()) {
+        printf("\nHenuz bagli node yok. Once ag taramasi yapin (secim 1).\n");
+        return;
+    }
     
-    if (strncmp(cmd, "n1:", 3) == 0) {
-        // node1 komutlari
-        if (strncmp(cmd + 3, "hello", 5) == 0) {
-            printf("[USB] node1 hello paketi gonderiliyor...\n");
-            node1.sendHello();
+    printf("\n=== Bagli Nodlar (%zu adet) ===\n", network.size());
+    
+    // Node'ları vector'e koyup indeksle erişim sağlayalım
+    std::vector<std::pair<uint64_t, RemoteNode*>> node_list;
+    for (const auto& pair : network) {
+        node_list.push_back(pair);
+    }
+    
+    // Node'ları listele
+    for (size_t i = 0; i < node_list.size(); i++) {
+        printf("%zu. Node ID: %llx\n", i+1, node_list[i].first);
+        printf("   Public Key: %llx\n", node_list[i].second->getPublicKey().getKey());
+        printf("   Modulus: %llx\n", node_list[i].second->getPublicKey().getBase());
+        printf("\n");
+    }
+    
+    printf("=== Node Secimi ===\n");
+    printf("1-%zu: Node sec\n", node_list.size());
+    printf("0: Ana menuye don\n");
+    printf("Hangi node'u seciyorsunuz: ");
+    
+    int c = getchar();
+    if (c != EOF) {
+        getchar_timeout_us(1000); // '\n' icin
+        printf("%c\n", c);
+        
+        if (c == '0') {
+            return;
         }
-        else if (strncmp(cmd + 3, "ping:", 5) == 0) {
-            uint64_t target_id = strtoull(cmd + 8, NULL, 16);
-            printf("[USB] node1 ping gonderiliyor -> %llx\n", target_id);
-            node1.sendPing(target_id);
-        }
-        else if (strncmp(cmd + 3, "msg:", 4) == 0) {
-            // format: n1:msg:hedef_id:mesaj
-            char* colon1 = strchr(cmd + 7, ':');
-            if (colon1) {
-                *colon1 = '\0';
-                uint64_t target_id = strtoull(cmd + 7, NULL, 16);
-                char* message = colon1 + 1;
-                printf("[USB] node1 mesaj gonderiliyor -> %llx: %s\n", target_id, message);
-                node1.sendMessage(target_id, message);
-                *colon1 = ':'; // geri koy
+        else if (c >= '1' && c <= '9') {
+            int node_index = c - '1'; // 1-based'den 0-based'e çevir
+            if (node_index < (int)node_list.size()) {
+                uint64_t target_id = node_list[node_index].first;
+                printf("\nNode %zu (%llx) secildi.\n", node_index + 1, target_id);
+                
+                // İşlem seçimi
+                printf("\n=== Islem Secimi ===\n");
+                printf("p: Ping gonder\n");
+                printf("m: Mesaj gonder\n");
+                printf("0: Geri don\n");
+                printf("Seciminiz: ");
+                
+                int operation = getchar();
+                if (operation != EOF) {
+                    getchar();
+                    printf("%c\n", operation);
+                    
+                    if (operation == 'p' || operation == 'P') {
+                        printf("Node %llx'e ping gonderiliyor...\n", target_id);
+                        node.getRFD().sendPing(target_id);
+                        printf("Ping gonderildi!\n");
+                    }
+                    else if (operation == 'm' || operation == 'M') {
+                        printf("Node %llx'e mesaj gondereceksiniz.\n", target_id);
+                        printf("Mesajinizi yazin ve Enter'a basin (max 200 karakter):\n");
+                        
+                        char message[201];
+                        message[0] = '\0';
+                        int pos = 0;
+                        
+                        // Mesaj inputu
+                        while (pos < 200) {
+                            int msg_c = getchar();
+                            if (msg_c == '\n' || msg_c == '\r') {
+                                break;
+                            }
+                            if (msg_c != EOF) {
+                                message[pos++] = msg_c;
+                                printf("%c", msg_c); // Echo
+                            }
+                        }
+                        message[pos] = '\0';
+                        printf("\n");
+                        
+                        if (pos > 0) {
+                            printf("Node %llx'e mesaj gonderiliyor: %s\n", target_id, message);
+                            node.getRFD().sendMessage(target_id, message);
+                            printf("Mesaj gonderildi!\n");
+                        } else {
+                            printf("Bos mesaj gonderilemez!\n");
+                        }
+                    }
+                    else if (operation == '0') {
+                        printf("Node secim menusu...\n");
+                        // Tekrar node seçimi için döngü devam edecek
+                    }
+                    else {
+                        printf("Gecersiz islem!\n");
+                    }
+                }
+            } else {
+                printf("Gecersiz node numarasi!\n");
             }
         }
-    }
-    else if (strncmp(cmd, "n2:", 3) == 0) {
-        // node 2 yonetimi suanlik yok
-    }
-    else if (strcmp(cmd, "help") == 0) {
-        printf("=== komut listesi ===\n");
-        printf("n1:hello - node1 hello paketi gonder\n");
-        printf("n1:ping:hedef_id - node1 ping gonder (hex id)\n");
-        printf("n1:msg:hedef_id:mesaj - node1 mesaj gonder\n");
-        printf("help - bu yardim mesajini goster\n");
-        printf("ornek: n1:hello\n");
-        printf("ornek: n1:ping:1234567890abcdef\n");
-        printf("ornek: n1:msg:1234567890abcdef:selam nasılsin\n");
-    }
-    else {
-        printf("[USB] bilinmeyen komut: %s (help yazin)\n", cmd);
+        else {
+            printf("Gecersiz secim!\n");
+        }
     }
 }
 
@@ -68,28 +145,23 @@ void core1_main() {
     
     while (true) {
         node2.getRFD().processIncomingData(node2);
-        
-        sleep_ms(10);
     }
 }
 
 int main() {
     stdio_init_all();
-    
-    // mutex'i baslat
+    sleep_ms(2000);
+
+    srand(time_us_64());
+
     mutex_init(&printf_mutex);
     
-    printf("=== rfd manual komut sistemi ===\n");
+    printf("=== rfd ag yonetimi sistemi ===\n");
     printf("node1: uart0 (gpio 0-1)\n");
     printf("node2: uart1 (gpio 4-5)\n");
-    printf("komutlar icin 'help' yazin\n");
-    sleep_ms(2000);
     
     multicore_launch_core1(core1_main);
     
-    sleep_ms(100);
-
-
     Node node1(RFD(uart0, 0, 1));
     
     printf("[CORE0] node1 hazir, id: %llx\n", node1.getId());
@@ -98,41 +170,34 @@ int main() {
         sleep_ms(10);
     }
     
-    printf("[CORE0] sistem hazir, komut bekleniyor...\n");
-    printf(">>> ");
-    
-    char input_buffer[256];
-    int input_pos = 0;
+    printf("[CORE0] sistem hazir!\n");
     
     while (true) {
-        // gelen veriyi isle
+        // Arka planda paket işlemeye devam et
         node1.getRFD().processIncomingData(node1);
         
-        // usb'den komut oku
-        int c = getchar_timeout_us(1000); 
-        if (c >= 0) {
-            if (c == '\n' || c == '\r') {
-                if (input_pos > 0) {
-                    input_buffer[input_pos] = '\0';
-                    parse_and_execute_command(input_buffer, node1.getRFD());
-                    input_pos = 0;
-                    sleep_ms(10); 
-                    printf(">>> ");
-                }
-            } else if (c == '\b' || c == 127) { // backspace
-                if (input_pos > 0) {
-                    input_pos--;
-                    printf("\b \b");
-                }
-            } else if (input_pos < 255) {
-                input_buffer[input_pos++] = c;
-                printf("%c", c);
+        int c = getchar_timeout_us(1);
+        if (c != EOF) {
+            switch (c) {
+                case '1':
+                    network_scan(node1.getRFD());
+                    break;
+                case '2':
+                    getchar_timeout_us(1000); // '\n' icin
+                    show_connected_nodes_menu(node1);
+                    break;
+                case '0':
+                    printf("Sistem kapatiliyor...\n");
+                    return 0;
+                case -2:
+                    break;
+                default:
+                    printf("Gecersiz secim! Lutfen 0, 1 veya 2 girin.\n");
+                    show_menu();
             }
         }
         
-        sleep_ms(20);
     }
     
     return 0;
 }
-    

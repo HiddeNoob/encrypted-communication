@@ -5,3 +5,4 @@
 #include <PacketHeader.h>
 #include <PingPacket.h>
 #include <SignedMessagePacket.h>
+#include <KeyPacket.h>

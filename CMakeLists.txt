@@ -51,16 +51,20 @@ pico_enable_stdio_usb(rfd-encrypt 1)
 add_subdirectory(math)
 add_subdirectory(rsa)
 add_subdirectory(rfd)
+add_subdirectory(comm)
 
 # Add the standard library to the build
-target_link_libraries(rfd-encrypt pico_stdlib pico_multicore math_lib rsa_lib rfd_lib )
+target_link_libraries(rfd-encrypt pico_stdlib pico_multicore math_lib rsa_lib rfd_lib comm_lib)
 
 # Add the standard include files to the build
 target_include_directories(rfd-encrypt PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}/math/headers
         ${CMAKE_CURRENT_SOURCE_DIR}/rsa/headers
-        ${CMAKE_CURRENT_SOURCE_DIR}/rfd/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/comm/headers
+        ${CMAKE_CURRENT_SOURCE_DIR}/rfd/headers
+        ${CMAKE_CURRENT_SOURCE_DIR}/rfd/core/headers
+        ${CMAKE_CURRENT_SOURCE_DIR}/rfd/packets/headers
 )
 
 pico_add_extra_outputs(rfd-encrypt)

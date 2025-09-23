@@ -9,7 +9,8 @@ enum PacketType {
     PACKET_SIGNED_MESSAGE = 0x02,
     PACKET_PING = 0x03,
     PACKET_ACK = 0x04,
-    PACKET_ERROR = 0x05
+    PACKET_KEY = 0x05,
+    PACKET_ERROR = 0x06
 };
 
 // Soyut paket
@@ -32,7 +33,7 @@ public:
     uint64_t getSenderId() const { return sender_id; }
 
     // buffer'dan paket oluşturur
-    static std::unique_ptr<Packet> createFromBuffer(const uint8_t* buffer, uint8_t length, PacketType type);
+    static std::unique_ptr<Packet> createFromBuffer(const uint8_t* buffer, uint32_t length, PacketType type);  // uint32_t yap
 
-    void send(uart_inst_t* uart) const;
+    void send(IComm& comm) const;
 };

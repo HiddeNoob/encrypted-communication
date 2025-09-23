@@ -23,11 +23,13 @@ void PingPacket::handle(Node& node_instance) {
     
     // sadece bana gonderilen ping'lere cevap ver
     if (target_id == node_instance.getId()) {
-        printf("[PingPacket] PING bana gonderildi, ACK gonderiliyor\n");
-        auto ack = std::make_unique<AckPacket>(node_instance.getId(), target_id, PACKET_PING);
+        printf("[PingPacket] PING bana gonderildi (from %llx), ACK gonderiliyor\n", sender_id);
+        auto ack = std::make_unique<AckPacket>(node_instance.getId(), sender_id, PACKET_PING);
         ack->send(node_instance.getRFD().getUart());
+        printf("[PingPacket] ACK gonderildi, ping handle tamamlandi\n");
+        return; // ACK gönderildikten sonra fonksiyondan çık
     } else {
-        printf("[PingPacket] PING baska node'a gonderildi, gormezden geliniyor\n");
+        printf("[PingPacket] PING baska node'a gonderildi (target: %llx), gormezden geliniyor\n", target_id);
         return; // burada fonksiyondan cikiyoruz, ack gondermiyor
     }
 }

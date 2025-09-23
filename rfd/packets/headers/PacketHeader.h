@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 // genel paket
 #pragma pack(push, 1) // paddingleri siliyor
 struct PacketHeader {
