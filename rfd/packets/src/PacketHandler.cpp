@@ -14,10 +14,7 @@ bool PacketHandler::receivePacket(PacketHeader* header, uint8_t* payload) {
     // UART'dan yeni veri oku
     fillBufferFromComm();
 
-    // Buffer'da yeterli veri var mı?
-    if (rx_buffer_pos < sizeof(PacketHeader)) {
-        return false;
-    }
+
     
     // Magic byte'ları ara
     size_t magic_pos;
@@ -27,6 +24,11 @@ bool PacketHandler::receivePacket(PacketHeader* header, uint8_t* payload) {
         return false;
     }
     
+    // Buffer'da yeterli veri var mı?
+    if (rx_buffer_pos - magic_pos < sizeof(PacketHeader)) {
+        return false;
+    }
+
     // Header'ı oku ve validate et
     PacketHeader temp_header;
     memcpy(&temp_header, &rx_buffer[magic_pos], sizeof(PacketHeader));
@@ -71,11 +73,10 @@ void PacketHandler::fillBufferFromComm() {
         }
 
     }
-    if(data_read){
-        printf("new data readed: %d bytes\n", bytes_read_this_call);
-        printf("[PacketHandler] Buffer position after read: %zu\n", rx_buffer_pos);
-        for(int i = rx_buffer_pos - bytes_read_this_call ; i < rx_buffer_pos ; i++){
-            printf("%02x ",rx_buffer[i]);
+    if (RFD_ENABLE_RX_VERBOSE && data_read) {
+        printf("[PacketHandler] new data readed: %d bytes, buffer position: %zu, bytes: ", bytes_read_this_call,rx_buffer_pos);
+        for(int i = (int)rx_buffer_pos - bytes_read_this_call ; i < (int)rx_buffer_pos ; i++){
+            printf("%02X ",rx_buffer[i]);
         }
         printf("\n");
     }
@@ -92,11 +93,10 @@ bool PacketHandler::findMagicBytes(size_t& magic_position) {
     for (int i = (int)rx_buffer_pos - 2; i >= 0; i--) { // stackin en ustundeki magic bytelara baklaım
         if (rx_buffer[i] == 0xAA && rx_buffer[i + 1] == 0x55) {
             magic_position = i;
-            printf("[PacketHandler] Magic bytes found at position %d\n", i);
+            //printf("[PacketHandler] Magic bytes found at position %d\n", i);
             return true;
         }
     }
-    printf("[PacketHandler] No magic bytes found\n");
     return false;
 }
 
@@ -123,17 +123,15 @@ bool PacketHandler::isPacketComplete(size_t magic_pos, const PacketHeader* heade
     size_t required_bytes = sizeof(PacketHeader) + header->length;
     size_t available_bytes = rx_buffer_pos - magic_pos;
     
-    printf("[PacketHandler] Checking completion: magic_pos=%zu, required=%zu, available=%zu, buffer_pos=%zu\n",
-           magic_pos, required_bytes, available_bytes, rx_buffer_pos);
-    
-    printf("[PacketHandler] Complete buffer (%zu bytes): ", rx_buffer_pos);
-    for (size_t i = 0; i < rx_buffer_pos; i++) {
-        printf("%02X ", rx_buffer[i]);
-    }
-    printf("\n");
-    
     bool is_complete = available_bytes >= required_bytes;
-    printf("[PacketHandler] Packet complete: %s\n", is_complete ? "YES" : "NO");
+    if (RFD_ENABLE_RX_VERBOSE && is_complete){
+        printf("[PacketHandler] Packet complete: %s\n", is_complete ? "YES" : "NO");
+        printf("[PacketHandler] Complete buffer (%zu bytes): ", rx_buffer_pos);
+        for (size_t i = 0; i < rx_buffer_pos; i++) {
+            printf("%02X ", rx_buffer[i]);
+        }
+        printf("\n");
+    }
     
     return is_complete;
 }
@@ -148,12 +146,13 @@ void PacketHandler::extractPacket(size_t magic_pos, const PacketHeader* header,
     
     printf("[PacketHandler] Packet extracted - Type: 0x%02X, Length: %d\n", 
            header->type, header->length);
-    
-    printf("[PacketHandler] Raw packet data: ");
-    for (size_t i = magic_pos; i < magic_pos + sizeof(PacketHeader) + header->length; i++) {
-        printf("%02X ", rx_buffer[i]);
+    if (RFD_ENABLE_RX_VERBOSE) {
+        printf("[PacketHandler] Raw packet data: ");
+        for (size_t i = magic_pos; i < magic_pos + sizeof(PacketHeader) + header->length; i++) {
+            printf("%02X ", rx_buffer[i]);
+        }
+        printf("\n");
     }
-    printf("\n");
     
     // İşlenen veriyi buffer'dan kaldır
     size_t total_packet_size = sizeof(PacketHeader) + header->length;
@@ -161,31 +160,32 @@ void PacketHandler::extractPacket(size_t magic_pos, const PacketHeader* header,
 }
 
 void PacketHandler::removeProcessedData(size_t bytes_to_remove) {
-    printf("[PacketHandler] removeProcessedData: removing %zu bytes from buffer (current size: %zu)\n", 
-           bytes_to_remove, rx_buffer_pos);
+    if (RFD_ENABLE_RX_VERBOSE) printf("[PacketHandler] removeProcessedData: removing %zu bytes from buffer (current size: %zu)\n", 
+        bytes_to_remove, rx_buffer_pos);
     
     if (bytes_to_remove >= rx_buffer_pos) {
         // Tüm buffer temizleniyor
-        printf("[PacketHandler] Clearing entire buffer\n");
+    if (RFD_ENABLE_RX_VERBOSE) printf("[PacketHandler] Clearing entire buffer\n");
         rx_buffer_pos = 0;
         memset(rx_buffer, 0, sizeof(rx_buffer)); // Buffer'ı sıfırla
     } else { 
         // Kalan veriyi buffer başına taşı
         size_t remaining = rx_buffer_pos - bytes_to_remove;
-        printf("[PacketHandler] Moving %zu remaining bytes to start\n", remaining);
+    if (RFD_ENABLE_RX_VERBOSE) printf("[PacketHandler] Moving %zu remaining bytes to start\n", remaining);
         
         // Before move - show what's being removed and what's staying
-        printf("[PacketHandler] Removing bytes: ");
-        for (size_t i = 0; i < bytes_to_remove && i < rx_buffer_pos; i++) {
-            printf("%02X ", rx_buffer[i]);
+        if (RFD_ENABLE_RX_VERBOSE) {
+            printf("[PacketHandler] Removing bytes: ");
+            for (size_t i = 0; i < bytes_to_remove && i < rx_buffer_pos; i++) {
+                printf("%02X ", rx_buffer[i]);
+            }
+            printf("\n");
+            printf("[PacketHandler] Keeping bytes: ");
+            for (size_t i = bytes_to_remove; i < rx_buffer_pos; i++) {
+                printf("%02X ", rx_buffer[i]);
+            }
+            printf("\n");
         }
-        printf("\n");
-        
-        printf("[PacketHandler] Keeping bytes: ");
-        for (size_t i = bytes_to_remove; i < rx_buffer_pos; i++) {
-            printf("%02X ", rx_buffer[i]);
-        }
-        printf("\n");
         
         memmove(rx_buffer, &rx_buffer[bytes_to_remove], remaining);
         rx_buffer_pos = remaining;
@@ -193,15 +193,12 @@ void PacketHandler::removeProcessedData(size_t bytes_to_remove) {
         // Clear the rest of the buffer to avoid confusion
         memset(&rx_buffer[rx_buffer_pos], 0, sizeof(rx_buffer) - rx_buffer_pos);
         
-        printf("[PacketHandler] After cleanup, buffer size: %zu\n", rx_buffer_pos);
+    if (RFD_ENABLE_RX_VERBOSE) printf("[PacketHandler] After cleanup, buffer size: %zu\n", rx_buffer_pos);
     }
 }
 
 void PacketHandler::handleIncompletePacket(size_t magic_pos, size_t needed_bytes, size_t available_bytes) {
     uint32_t current_time = time_us_32();
-    
-    printf("[PacketHandler] handleIncompletePacket: magic_pos=%zu, needed=%zu, available=%zu\n",
-           magic_pos, needed_bytes, available_bytes);
     
     // Magic byte'tan önceki garbage'ı temizle
     if (magic_pos > 0) {
@@ -215,9 +212,13 @@ void PacketHandler::handleIncompletePacket(size_t magic_pos, size_t needed_bytes
         // Yeni incomplete paket
         incomplete_packet_start_time = current_time;
         last_incomplete_size = rx_buffer_pos;
-        printf("[PacketHandler] Starting incomplete packet timer\n");
-    } else if (current_time - incomplete_packet_start_time > 2000000) { // 2 saniye
-        printf("[PacketHandler] Incomplete packet timeout, clearing buffer\n");
+    if (RFD_ENABLE_RX_VERBOSE) printf("[PacketHandler] Starting incomplete packet timer\n");
+    } else if (current_time - incomplete_packet_start_time > PACKET_TIME_OUT_MS * 1000) {
+          if (RFD_ENABLE_RX_VERBOSE) {
+                printf("[PacketHandler] handleIncompletePacket TIMEOUT: magic_pos=%zu, needed=%zu, available=%zu\n",
+                    magic_pos, needed_bytes, available_bytes);
+                printf("[PacketHandler] Incomplete packet timeout, clearing buffer\n");
+          }
         clearBuffer();
         return;
     }
@@ -238,15 +239,15 @@ void PacketHandler::periodicBufferMaintenance() {
     // 1 saniyede bir maintenance
     if (current_time - last_cleanup_time > 1000000) {
         if (rx_buffer_pos > 20) { // Boş buffer'lar için log yazdırma
-            printf("[PacketHandler] Periodic maintenance - %zu bytes in buffer\n", rx_buffer_pos);
+            if (RFD_ENABLE_RX_VERBOSE) printf("[PacketHandler] Periodic maintenance - %zu bytes in buffer\n", rx_buffer_pos);
             
             // Magic byte arayan cleanup
             size_t magic_pos;
             if (!findMagicBytes(magic_pos)) {
-                printf("[PacketHandler] No valid magic bytes, clearing buffer\n");
+                if (RFD_ENABLE_RX_VERBOSE) printf("[PacketHandler] No valid magic bytes, clearing buffer\n");
                 clearBuffer();
             } else if (magic_pos > 0) {
-                printf("[PacketHandler] Cleaning %zu garbage bytes\n", magic_pos);
+                if (RFD_ENABLE_RX_VERBOSE) printf("[PacketHandler] Cleaning %zu garbage bytes\n", magic_pos);
                 removeProcessedData(magic_pos);
             }
         }

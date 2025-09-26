@@ -19,11 +19,6 @@ void RFD::initID(){
 }
 
 void RFD::processIncomingData(Node& node) {
-    // Sadece okunacak veri varsa paketi işlemeyi dene
-    if (!uart.isReadable()) {
-        return;
-    }
-
     PacketHeader header;
     uint8_t payload[MAX_PACKET_PAYLOAD_SIZE];
     
@@ -94,10 +89,10 @@ void RFD::sendMessage(uint64_t target_id, const char* message) {
     // hashi imzala
     printf("[RFD %llx] Signing hash...\n", this->getId());
     Key* myPrivateKey = getCryptionService().getPrivateKey();
-    rsa_data* signedMessage = myPrivateKey->sign((void*)signature, sizeof(signature), sizeof(uint32_t));
+    rsa_data* signedMessage = myPrivateKey->sign((void*)signature, message_length, sizeof(uint32_t));
     printf("[RFD %llx] Hash signed\n", this->getId());
     
-    msg->setSignature(signedMessage);
+    msg->setSignature(signedMessage, message_length * sizeof(uint32_t));
     delete[] signedMessage;
     
     printf("[RFD %llx] Sending message to: %llx\n", this->getId(), target_id);

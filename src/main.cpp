@@ -8,8 +8,8 @@
 #include "RFD.h"
 #include "Node.h"
 
-mutex_t printf_mutex;
 volatile bool core1_ready = false;
+mutex_t printf_mutex;
 
 void show_menu() {
     printf("\n=== RFD Ag Yonetimi Menusu ===\n");
@@ -17,14 +17,6 @@ void show_menu() {
     printf("2. Bagli olan nodelar\n");
     printf("0. Cikis\n");
     printf("Seciminiz (0-2): ");
-}
-
-void network_scan(RFD& rfd) {
-    printf("\n[AG TARAMA] Hello paketi gonderiliyor...\n");
-    printf("Diger nodlardan yanit bekleniyor...\n");
-    rfd.sendHello();
-    printf("Hello paketi gonderildi. Gelen yanitlar otomatik olarak isleniyor.\n");
-    printf("Biraz bekleyip '2' secenegini kullanarak kayitli nodelari gorebilirsiniz.\n");
 }
 
 void show_connected_nodes_menu(Node& node) {
@@ -109,9 +101,7 @@ void show_connected_nodes_menu(Node& node) {
                         printf("\n");
                         
                         if (pos > 0) {
-                            printf("Node %llx'e mesaj gonderiliyor: %s\n", target_id, message);
                             node.getRFD().sendMessage(target_id, message);
-                            printf("Mesaj gonderildi!\n");
                         } else {
                             printf("Bos mesaj gonderilemez!\n");
                         }
@@ -145,6 +135,7 @@ void core1_main() {
     
     while (true) {
         node2.getRFD().processIncomingData(node2);
+        sleep_ms(1);
     }
 }
 
@@ -171,7 +162,7 @@ int main() {
     }
     
     printf("[CORE0] sistem hazir!\n");
-    
+
     while (true) {
         // Arka planda paket işlemeye devam et
         node1.getRFD().processIncomingData(node1);
@@ -180,7 +171,7 @@ int main() {
         if (c != EOF) {
             switch (c) {
                 case '1':
-                    network_scan(node1.getRFD());
+                    node1.getRFD().sendHello();
                     break;
                 case '2':
                     getchar_timeout_us(1000); // '\n' icin
@@ -198,6 +189,5 @@ int main() {
         }
         
     }
-    
     return 0;
 }

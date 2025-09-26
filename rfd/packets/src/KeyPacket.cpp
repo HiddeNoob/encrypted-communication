@@ -14,7 +14,7 @@ void KeyPacket::serialize(uint8_t* buffer) const {
     memcpy(buffer + offset, &modulus, sizeof(modulus));
 }
 
-bool KeyPacket::deserialize(const uint8_t* buffer, uint8_t length) {
+bool KeyPacket::deserialize(const uint8_t* buffer, uint16_t length) {
     if (length < getPayloadSize()) return false;
     Packet::deserialize(buffer, length);
     size_t offset = Packet::getPayloadSize();

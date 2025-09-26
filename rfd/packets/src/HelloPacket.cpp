@@ -12,7 +12,7 @@ void HelloPacket::serialize(uint8_t* buffer) const {
     memcpy(buffer + offset, &modulus, sizeof(modulus));
 }
 
-bool HelloPacket::deserialize(const uint8_t* buffer, uint8_t length) {
+bool HelloPacket::deserialize(const uint8_t* buffer, uint16_t length) {
     if (length < getPayloadSize()) return false;
 
     Packet::deserialize(buffer, length);

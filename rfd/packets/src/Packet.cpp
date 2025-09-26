@@ -5,7 +5,7 @@ void Packet::serialize(uint8_t* buffer) const {
     memcpy(buffer, &sender_id, sizeof(sender_id));
 }
 
-bool Packet::deserialize(const uint8_t* buffer, uint8_t length) {
+bool Packet::deserialize(const uint8_t* buffer, uint16_t length) {
     if (length < getPayloadSize()) return false;
 
     memcpy(&sender_id, buffer, sizeof(sender_id));
@@ -20,33 +20,37 @@ void Packet::send(IComm& comm) const {
     header.magic2 = 0x55;
     header.type = (uint8_t)packet_type;
     header.length = getPayloadSize();
-
     printf("[Packet] Preparing to send packet type: 0x%02X, length: %d\n", header.type, header.length);
-    printf("[Packet] Header bytes: ");
-    for (int i = 0; i < sizeof(PacketHeader); i++) {
-        printf("%02X ", ((uint8_t*)&header)[i]);
+    if (RFD_ENABLE_PACKET_HEX_LOG) {
+        printf("[Packet] Header bytes: ");
+        for (int i = 0; i < (int)sizeof(PacketHeader); i++) {
+            printf("%02X ", ((uint8_t*)&header)[i]);
+        }
+        printf("\n");
     }
-    printf("\n");
     // Header gönder
     uint8_t* header_bytes = (uint8_t*)&header;
     for (int i = 0; i < sizeof(PacketHeader); i++) {
         comm.sendByte(header_bytes[i]);
     }
-    printf("[Packet] Header sent\n");
     
-    // TX buffer'ın boşalmasını bekle
-    comm.waitSendComplete();
+    // TX buffer'ın boşalmasını bekle (opsiyonel)
+    if (PACKET_WAIT_AFTER_HEADER) {
+        comm.waitSendComplete();
+    }
     
-    printf("[Packet] Payload bytes: ");
-
+    if (RFD_ENABLE_PACKET_HEX_LOG) printf("[Packet] Payload bytes: ");
+    
     // Payload gönder
     uint8_t payload_buffer[MAX_PACKET_PAYLOAD_SIZE];
     serialize(payload_buffer);
     
-    for (int i = 0; i < header.length; i++) {
-        printf("%02X ", payload_buffer[i]);
+    if (RFD_ENABLE_PACKET_HEX_LOG) {
+        for (int i = 0; i < header.length; i++) {
+            printf("%02X ", payload_buffer[i]);
+        }
+        printf("\n");
     }
-    printf("\n");
 
     // Payload'ı küçük parçalar halinde gönder
     const uint32_t chunk_size = PACKET_CHUNK_SIZE;
@@ -54,17 +58,19 @@ void Packet::send(IComm& comm) const {
         uint32_t remaining = header.length - i;
         uint32_t current_chunk = (remaining > chunk_size) ? chunk_size : remaining;
         
-        printf("[Packet] Sending chunk %u-%u (%u bytes)\n", i, i + current_chunk - 1, current_chunk);
+    // printf("[Packet] Sending chunk %u-%u (%u bytes)\n", i, i + current_chunk - 1, current_chunk);
         
         for (uint32_t j = 0; j < current_chunk; j++) {
             uint32_t byte_index = i + j;
             comm.sendByte(payload_buffer[byte_index]);
-            sleep_us(PACKET_BYTE_DELAY_US);
+            if (PACKET_BYTE_DELAY_US > 0) sleep_us(PACKET_BYTE_DELAY_US);
         }
         
-        // Her chunk'tan sonra bekle
-        comm.waitSendComplete();
-        sleep_ms(PACKET_CHUNK_DELAY_MS);
+        // Her chunk'tan sonra bekle (opsiyonel)
+        if (PACKET_WAIT_EACH_CHUNK) {
+            comm.waitSendComplete();
+        }
+        if (PACKET_CHUNK_DELAY_US > 0) sleep_us(PACKET_CHUNK_DELAY_US);
         
     }
 

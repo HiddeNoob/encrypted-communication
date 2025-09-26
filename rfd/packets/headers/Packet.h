@@ -24,9 +24,9 @@ public:
     virtual ~Packet() = default;
 
     // soyut fonksiyonlar
-    virtual uint8_t getPayloadSize() const { return sizeof(uint64_t); };
+    virtual uint16_t getPayloadSize() const { return sizeof(uint64_t); };
     virtual void serialize(uint8_t* buffer) const;
-    virtual bool deserialize(const uint8_t* buffer, uint8_t length);
+    virtual bool deserialize(const uint8_t* buffer, uint16_t length);
     virtual void handle(Node& node_instance) = 0;
 
     PacketType getType() const { return packet_type; }

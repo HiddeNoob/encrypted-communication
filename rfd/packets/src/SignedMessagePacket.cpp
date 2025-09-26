@@ -11,15 +11,9 @@ void SignedMessagePacket::serialize(uint8_t* buffer) const {
     memcpy(buffer + offset, payload, sizeof(payload));
     offset += sizeof(payload);
     memcpy(buffer + offset, signature, sizeof(signature));
-    printf("Serialized SignedMessagePacket: ");
-    for (size_t i = 0; i < getPayloadSize(); i++)
-    {
-        printf("%02X ", buffer[i]);
-    }
-    printf("\n");
 }
 
-bool SignedMessagePacket::deserialize(const uint8_t* buffer, uint8_t length) {
+bool SignedMessagePacket::deserialize(const uint8_t* buffer, uint16_t length) {
     if (length < getPayloadSize()) return false;
 
     Packet::deserialize(buffer, length);
@@ -39,30 +33,18 @@ void SignedMessagePacket::handle(Node& node_instance) {
     if (target_id == node_instance.getId()) {
         printf("[SignedMessagePacket] Message for me!");
 
-        printf("Payload: ");
-        for (size_t i = 0; i < sizeof(payload) / sizeof(payload[0]); i++)
-        {
-            printf("%02X ", payload[i]);
-        }
-        printf("\nSignature: ");
-        for (size_t i = 0; i < sizeof(signature) / sizeof(signature[0]); i++)
-        {
-            printf("%02X ", signature[i]);
-        }
-
         rsa_data* data = node_instance.getRFD()
                                 .getCryptionService()
                                 .getPrivateKey()
                                 ->sign(
                                     (void*)payload,
-                                    sizeof(payload),
+                                    sizeof(payload) / sizeof(payload[0]),
                                     sizeof(rsa_data)
                                 );
 
         printf("\nDecrypted data: ");
-        for (size_t i = 0; i < sizeof(payload) / sizeof(payload[0]); i++)
-        {
-            printf("%c ", static_cast<char>(data[i] & 0xFF)); // sifrelenen veri char tipindeydi
+        for (size_t i = 0; ((char*)(data[i])) ; i++) {
+            printf("%c", ((char*)(data[i]))); // sifrelenen veri char tipindeydi
         }
         printf("\n");
 
@@ -77,13 +59,18 @@ void SignedMessagePacket::handle(Node& node_instance) {
 // 
 void SignedMessagePacket::setPayload(const void* data, size_t len) {
     if(len > sizeof(payload)) {
-        printf("[SignedMessagePacket] Warning: Payload length exceeds 32 bytes, truncating.\n");
+        printf("[SignedMessagePacket] Warning: Payload length %zu exceeds buffer %zu, truncating.\n", len, sizeof(payload));
         len = sizeof(payload);
     }
     memset(payload, 0, sizeof(payload));
     memcpy(payload, data, len);
 }
 
-void SignedMessagePacket::setSignature(const void* sig) {
-    memcpy(signature, sig, sizeof(signature));
+void SignedMessagePacket::setSignature(const void* sig, size_t len) {
+    if (len > sizeof(signature)) {
+        printf("[SignedMessagePacket] Warning: Signature length %zu exceeds buffer %zu, truncating.\n", len, sizeof(signature));
+        len = sizeof(signature);
+    }
+    memset(signature, 0, sizeof(signature));
+    memcpy(signature, sig, len);
 }

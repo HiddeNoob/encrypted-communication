@@ -14,7 +14,7 @@ void AckPacket::serialize(uint8_t* buffer) const {
     offset += sizeof(receiver);
 }
 
-bool AckPacket::deserialize(const uint8_t* buffer, uint8_t length) {
+bool AckPacket::deserialize(const uint8_t* buffer, uint16_t length) {
     if (length < getPayloadSize()) return false;
     Packet::deserialize(buffer, length);
     size_t offset = Packet::getPayloadSize();
