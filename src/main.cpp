@@ -62,57 +62,61 @@ void show_connected_nodes_menu(Node& node) {
                 printf("\nNode %zu (%llx) secildi.\n", node_index + 1, target_id);
                 
                 // İşlem seçimi
-                printf("\n=== Islem Secimi ===\n");
-                printf("p: Ping gonder\n");
-                printf("m: Mesaj gonder\n");
-                printf("0: Geri don\n");
-                printf("Seciminiz: ");
-                
-                int operation = getchar();
-                if (operation != EOF) {
-                    getchar();
-                    printf("%c\n", operation);
+                while(true){
+
+                    printf("\n=== Islem Secimi ===\n");
+                    printf("p: Ping gonder\n");
+                    printf("m: Mesaj gonder\n");
+                    printf("0: Geri don\n");
+                    printf("Seciminiz: ");
                     
-                    if (operation == 'p' || operation == 'P') {
-                        printf("Node %llx'e ping gonderiliyor...\n", target_id);
-                        node.getRFD().sendPing(target_id);
-                        printf("Ping gonderildi!\n");
-                    }
-                    else if (operation == 'm' || operation == 'M') {
-                        printf("Node %llx'e mesaj gondereceksiniz.\n", target_id);
-                        printf("Mesajinizi yazin ve Enter'a basin (max 200 karakter):\n");
+                    int operation = getchar();
+                    if (operation != EOF) {
+                        getchar();
+                        printf("%c\n", operation);
                         
-                        char message[201];
-                        message[0] = '\0';
-                        int pos = 0;
-                        
-                        // Mesaj inputu
-                        while (pos < 200) {
-                            int msg_c = getchar();
-                            if (msg_c == '\n' || msg_c == '\r') {
-                                break;
+                        if (operation == 'p' || operation == 'P') {
+                            printf("Node %llx'e ping gonderiliyor...\n", target_id);
+                            node.getRFD().sendPing(target_id);
+                            printf("Ping gonderildi!\n");
+                        }
+                        else if (operation == 'm' || operation == 'M') {
+                            printf("Node %llx'e mesaj gondereceksiniz.\n", target_id);
+                            printf("Mesajinizi yazin ve Enter'a basin (max 200 karakter):\n");
+                            
+                            char message[201];
+                            message[0] = '\0';
+                            int pos = 0;
+                            
+                            // Mesaj inputu
+                            while (pos < 200) {
+                                int msg_c = getchar();
+                                if (msg_c == '\n' || msg_c == '\r') {
+                                    break;
+                                }
+                                if (msg_c != EOF) {
+                                    message[pos++] = msg_c;
+                                    printf("%c", msg_c); // Echo
+                                }
                             }
-                            if (msg_c != EOF) {
-                                message[pos++] = msg_c;
-                                printf("%c", msg_c); // Echo
+                            message[pos] = '\0';
+                            printf("\n");
+                            
+                            if (pos > 0) {
+                                node.getRFD().sendMessage(target_id, message);
+                            } else {
+                                printf("Bos mesaj gonderilemez!\n");
                             }
                         }
-                        message[pos] = '\0';
-                        printf("\n");
-                        
-                        if (pos > 0) {
-                            node.getRFD().sendMessage(target_id, message);
-                        } else {
-                            printf("Bos mesaj gonderilemez!\n");
+                        else if (operation == '0') {
+                            printf("Node secim menusu...\n");
+                            // Tekrar node seçimi için döngü devam edecek
+                        }
+                        else {
+                            printf("Gecersiz islem!\n");
                         }
                     }
-                    else if (operation == '0') {
-                        printf("Node secim menusu...\n");
-                        // Tekrar node seçimi için döngü devam edecek
-                    }
-                    else {
-                        printf("Gecersiz islem!\n");
-                    }
+
                 }
             } else {
                 printf("Gecersiz node numarasi!\n");
@@ -169,17 +173,19 @@ int main() {
         
         int c = getchar_timeout_us(1);
         if (c != EOF) {
+            getchar_timeout_us(1);
             switch (c) {
                 case '1':
                     node1.getRFD().sendHello();
                     break;
                 case '2':
-                    getchar_timeout_us(1000); // '\n' icin
                     show_connected_nodes_menu(node1);
                     break;
                 case '0':
                     printf("Sistem kapatiliyor...\n");
                     return 0;
+                case '\n':
+                case '\r':
                 case -2:
                     break;
                 default:
