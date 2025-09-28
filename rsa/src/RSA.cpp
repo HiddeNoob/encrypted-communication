@@ -53,7 +53,13 @@ void RSA::GenerateKeys(char bits) {
     printf("[RSA] Generating keys (%d bits)...\n", bits);
 
     rsa_data p = primeGen.getRandomPrime();
-    rsa_data q = primeGen.getRandomPrime();
+    rsa_data q;
+    
+    // Ensure we get two different primes
+    do {
+        q = primeGen.getRandomPrime();
+    } while (p == q);
+    
     rsa_data n = (rsa_data)p * q;
     rsa_data tot = FastMath::totient(p, q);
     printf("[RSA] Selected primes p=%llu, q=%llu\n", p, q);

@@ -49,7 +49,8 @@ void show_connected_nodes_menu(Node& node) {
     
     int c = getchar();
     if (c != EOF) {
-        getchar_timeout_us(1000); // '\n' icin
+        int next;
+        while ((next = getchar_timeout_us(10)) != EOF && next != '\n' && next != '\r') {}
         printf("%c\n", c);
         
         if (c == '0') {
@@ -72,7 +73,8 @@ void show_connected_nodes_menu(Node& node) {
                     
                     int operation = getchar();
                     if (operation != EOF) {
-                        getchar();
+                        int next;
+                        while ((next = getchar_timeout_us(10)) != EOF && next != '\n' && next != '\r') {}
                         printf("%c\n", operation);
                         
                         if (operation == 'p' || operation == 'P') {
@@ -109,8 +111,8 @@ void show_connected_nodes_menu(Node& node) {
                             }
                         }
                         else if (operation == '0') {
-                            printf("Node secim menusu...\n");
-                            // Tekrar node seçimi için döngü devam edecek
+                            printf("Node secim menusune donuluyor...\n");
+                            break;
                         }
                         else {
                             printf("Gecersiz islem!\n");
@@ -167,13 +169,18 @@ int main() {
     
     printf("[CORE0] sistem hazir!\n");
 
+    show_menu();
+    
     while (true) {
-        // Arka planda paket işlemeye devam et
         node1.getRFD().processIncomingData(node1);
         
-        int c = getchar_timeout_us(1);
-        if (c != EOF) {
-            getchar_timeout_us(1);
+        int c = getchar_timeout_us(1000);
+        if (c != EOF && c != PICO_ERROR_TIMEOUT) {
+            int next;
+            while ((next = getchar_timeout_us(10)) != EOF && next != '\n' && next != '\r') {}
+            
+            printf("%c\n", (char)c);
+            
             switch (c) {
                 case '1':
                     node1.getRFD().sendHello();
@@ -186,14 +193,13 @@ int main() {
                     return 0;
                 case '\n':
                 case '\r':
-                case -2:
                     break;
                 default:
                     printf("Gecersiz secim! Lutfen 0, 1 veya 2 girin.\n");
                     show_menu();
+                    break;
             }
         }
-        
     }
     return 0;
 }

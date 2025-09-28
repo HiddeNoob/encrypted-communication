@@ -81,18 +81,21 @@ void RFD::sendMessage(uint64_t target_id, const char* message) {
 
     // Basit imza oluştur
     printf("[RFD %llx] Creating hash signature...\n", this->getId());
-    uint32_t signature[message_length];
-    FastMath::myHash((uint8_t*)message,signature,message_length);
-    printf("[RFD %llx] Hash created\n", this->getId());
+    uint32_t messageHash;
+    FastMath::myHash((uint8_t*)message, &messageHash, message_length);
+    printf("[RFD %llx] Hash created: %u\n", this->getId(), messageHash);
 
+    // Reduce hash to fit within RSA modulus
+    Key* myPrivateKey = getCryptionService().getPrivateKey();
+    rsa_data reducedHash = messageHash % myPrivateKey->getBase();
+    printf("[RFD %llx] Hash reduced: %u -> %llu (mod %llu)\n", this->getId(), messageHash, reducedHash, myPrivateKey->getBase());
     
     // hashi imzala
     printf("[RFD %llx] Signing hash...\n", this->getId());
-    Key* myPrivateKey = getCryptionService().getPrivateKey();
-    rsa_data* signedMessage = myPrivateKey->sign((void*)signature, message_length, sizeof(uint32_t));
+    rsa_data* signedMessage = myPrivateKey->sign((void*)&reducedHash, 1, sizeof(rsa_data));
     printf("[RFD %llx] Hash signed\n", this->getId());
     
-    msg->setSignature(signedMessage, message_length * sizeof(uint32_t));
+    msg->setSignature(*signedMessage);
     delete[] signedMessage;
     
     printf("[RFD %llx] Sending message to: %llx\n", this->getId(), target_id);
